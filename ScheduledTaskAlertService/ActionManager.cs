@@ -30,7 +30,8 @@ namespace ScheduledTaskAlertService
         public ActionManager()
         {
             Running = false;
-            timer = new Timer(1000*10);
+            int checkIntervalInSeconds = int.Parse(ConfigurationManager.AppSettings["CheckIntervalInSeconds"]);
+            timer = new Timer(1000*checkIntervalInSeconds);
             timer.Elapsed += timer_Elapsed;
 
             debug = ((log4net.Repository.Hierarchy.Hierarchy)LogManager.GetRepository()).Root.Level.Value <= Level.Debug.Value;
@@ -82,6 +83,10 @@ namespace ScheduledTaskAlertService
         {
             try
             {
+                if (debug)
+                {
+                    log.Debug(string.Format("Checking scheduled task {0} on machine {1}.", taskConfig.ScheduledTaskName, taskConfig.MachineName));
+                }
                 using (var ts = new TaskService(taskConfig.MachineName))
                 {
                     var task = ts.FindTask(taskConfig.ScheduledTaskName, true);
@@ -105,8 +110,12 @@ namespace ScheduledTaskAlertService
             }
         }
 
-        private void SendMailgunEmail(string subject, string body, bool redAlert = false)
+        private void SendMailgunEmail(string subject, string body)
         {
+            if (debug)
+            {
+                log.Debug(string.Format("Sending email:\r\n {0} \r\n {1}", subject, body));
+            }
             var sendTo = currentConfig.EmailConfig.ToEmailAddressNotify.Split(',');
             var tagLine = string.Format("\r\n This email was generated at {0} from server {1}. ", DateTime.Now, Environment.MachineName);
             var formContentData = new List<KeyValuePair<string, string>>
@@ -148,6 +157,5 @@ namespace ScheduledTaskAlertService
             var jobject = JObject.Parse(filebody);
             currentConfig = jobject.ToObject<ScheduledTaskAlertServiceConfig>();
         }
-
     }
 }
