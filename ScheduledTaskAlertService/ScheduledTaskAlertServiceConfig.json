@@ -1,0 +1,13 @@
+﻿{
+    emailConfig : {
+        mailgunApiKey : "",
+        mailgunApiUrl : "",
+        fromEmailAddress : "",
+        toEmailAddressNotify : "",
+    },
+    scheduledTasks : {
+        machineName : "",
+        scheduledTaskName : "",
+        expectedResult : 0
+    }
+}
