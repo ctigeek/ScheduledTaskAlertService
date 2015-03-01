@@ -3,6 +3,6 @@
     class ScheduledTaskAlertServiceConfig
     {
         public EmailConfig EmailConfig { get; set; }
-        public ScheduledTaskConfig[] ScheduledTaskConfigs { get; set; }
+        public ScheduledTaskConfig[] ScheduledTasks { get; set; }
     }
 }

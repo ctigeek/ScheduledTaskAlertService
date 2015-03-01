@@ -62,7 +62,7 @@ namespace ScheduledTaskAlertService
                     if (Running)
                     {
                         LoadServiceConfigFromFile();
-                        foreach (var taskConfig in currentConfig.ScheduledTaskConfigs)
+                        foreach (var taskConfig in currentConfig.ScheduledTasks)
                         {
                             CheckScheduledTask(taskConfig);
                         }

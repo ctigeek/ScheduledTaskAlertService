@@ -5,9 +5,11 @@
         fromEmailAddress : "",
         toEmailAddressNotify : "",
     },
-    scheduledTasks : {
-        machineName : "",
-        scheduledTaskName : "",
-        expectedResult : 0
-    }
+    scheduledTasks : [
+         {
+            machineName : "localhost",
+            scheduledTaskName : "GoogleUpdateTaskMachineCore",
+            expectedResult : 0
+        }
+    ]
 }
