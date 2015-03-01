@@ -26,11 +26,12 @@ namespace ScheduledTaskAlertService
         public bool Running { get; private set; }
         private readonly bool debug;
         private ScheduledTaskAlertServiceConfig currentConfig;
+        private readonly int checkIntervalInSeconds;
 
         public ActionManager()
         {
             Running = false;
-            int checkIntervalInSeconds = int.Parse(ConfigurationManager.AppSettings["CheckIntervalInSeconds"]);
+            checkIntervalInSeconds = int.Parse(ConfigurationManager.AppSettings["CheckIntervalInSeconds"]);
             timer = new Timer(1000*checkIntervalInSeconds);
             timer.Elapsed += timer_Elapsed;
 
@@ -95,7 +96,7 @@ namespace ScheduledTaskAlertService
                         var errorString = string.Format("The scheduled task {0} on machine {1} could not be found.", taskConfig.ScheduledTaskName, taskConfig.MachineName);
                         throw new ConfigurationErrorsException(errorString);
                     }
-                    if (task.LastTaskResult != taskConfig.ExpectedResult)
+                    if (DateTime.Now.Subtract(task.LastRunTime).TotalSeconds < (checkIntervalInSeconds + 30) && task.LastTaskResult != taskConfig.ExpectedResult)
                     {
                         var body = string.Format("The scheduled task {0} on machine {1} which ran on {2} did not exit with the expected result. It exited with {3} and should have been {4}.",
                             taskConfig.ScheduledTaskName, taskConfig.MachineName, task.LastRunTime, task.LastTaskResult, taskConfig.ExpectedResult);
