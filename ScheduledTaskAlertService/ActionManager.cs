@@ -27,9 +27,11 @@ namespace ScheduledTaskAlertService
         private readonly bool debug;
         private ScheduledTaskAlertServiceConfig currentConfig;
         private readonly int checkIntervalInSeconds;
+        private readonly Dictionary<string, DateTime> lastCheckDateTime;
 
         public ActionManager()
         {
+            lastCheckDateTime = new Dictionary<string, DateTime>();
             Running = false;
             checkIntervalInSeconds = int.Parse(ConfigurationManager.AppSettings["CheckIntervalInSeconds"]);
             timer = new Timer(1000*checkIntervalInSeconds);
@@ -96,19 +98,29 @@ namespace ScheduledTaskAlertService
                         var errorString = string.Format("The scheduled task {0} on machine {1} could not be found.", taskConfig.ScheduledTaskName, taskConfig.MachineName);
                         throw new ConfigurationErrorsException(errorString);
                     }
-                    if (DateTime.Now.Subtract(task.LastRunTime).TotalSeconds < (checkIntervalInSeconds + 30) && task.LastTaskResult != taskConfig.ExpectedResult)
+                    if (task.State != TaskState.Running && GetLastCheckDateTime(taskConfig.ScheduledTaskName) < task.LastRunTime)
                     {
-                        var body = string.Format("The scheduled task {0} on machine {1} which ran on {2} did not exit with the expected result. It exited with {3} and should have been {4}.",
-                            taskConfig.ScheduledTaskName, taskConfig.MachineName, task.LastRunTime, task.LastTaskResult, taskConfig.ExpectedResult);
-                        SendMailgunEmail("Scheduled Task unexpected result.", body);
+                        lastCheckDateTime[taskConfig.ScheduledTaskName] = DateTime.Now;
+                        if (task.LastTaskResult != taskConfig.ExpectedResult)
+                        {
+                            var body = string.Format("The scheduled task '{0}' on machine '{1}' which ran on {2} did not exit with the expected result.\r\n It exited with '{3}'. It should have been '{4}'.",
+                                taskConfig.ScheduledTaskName, taskConfig.MachineName, task.LastRunTime, task.LastTaskResult, taskConfig.ExpectedResult);
+                            log.Error(body);
+                            SendMailgunEmail("Scheduled Task '" + taskConfig.ScheduledTaskName + "' did not complete correctly.", body);
+                        }
                     }
                 }
             }
             catch (Exception ex)
             {
-                log.Error(ex.ToString());
+                log.Error("Error Checking scheduled task.", ex);
                 SendMailgunEmail("Error checking scheduled task.", "The following error occured trying to check the status of a scheduled task: " + ex.ToString());
             }
+        }
+
+        private DateTime GetLastCheckDateTime(string taskName)
+        {
+            return (lastCheckDateTime.ContainsKey(taskName)) ? lastCheckDateTime[taskName] : DateTime.MinValue;
         }
 
         private void SendMailgunEmail(string subject, string body)
@@ -118,7 +130,7 @@ namespace ScheduledTaskAlertService
                 log.Debug(string.Format("Sending email:\r\n {0} \r\n {1}", subject, body));
             }
             var sendTo = currentConfig.EmailConfig.ToEmailAddressNotify.Split(',');
-            var tagLine = string.Format("\r\n This email was generated at {0} from server {1}. ", DateTime.Now, Environment.MachineName);
+            var tagLine = string.Format("\r\n \r\n This email was generated at {0} from server {1}. ", DateTime.Now, Environment.MachineName);
             var formContentData = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("from", currentConfig.EmailConfig.FromEmailAddress),
